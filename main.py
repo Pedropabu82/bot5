@@ -1,7 +1,5 @@
 import pandas as pd
 import pandas_ta as ta
-import numpy as np
-import time
 import logging
 import traceback
 from datetime import datetime, timedelta
@@ -9,7 +7,6 @@ import ccxt.async_support as ccxt
 import asyncio
 import json
 import os
-import math
 
 # Load configuration from JSON
 config_path = 'config.json'
@@ -17,7 +14,7 @@ if os.path.exists(config_path):
     with open(config_path) as f:
         cfg = json.load(f)
     strategy_cfg = cfg.get('strategy', {})
-    timeframes = cfg.get('timeframes', ['15m','30m','1h','2h','4h','6h'])
+    timeframes = cfg.get('timeframes', ['15m', '30m', '1h', '2h', '4h', '6h'])
     symbols = cfg.get('symbols', ['BTC/USDT'])
 else:
     # Defaults
@@ -33,7 +30,7 @@ else:
         'wt_div_os': -65,
         'commission_pct': 0.0004  # 0.04% per side
     }
-    timeframes = ['15m','30m','1h','2h','4h','6h']
+    timeframes = ['15m', '30m', '1h', '2h', '4h', '6h']
     symbols = ['BTC/USDT']
 
 # Extract parameters
@@ -324,15 +321,17 @@ def calculate_tp_sl(symbol):
     return tp, sl
 
 async def trading_loop():
-    api_key    = '932becea53220bb9244f779bde17b5c594ba0ab1eb4ceb925ec85ea9a446a6fc'
-    api_secret = '9a41ddf72bbab3a932a61988e588a9b83cdc2a2672c471db8f9d0c359748e9c0'
+    api_key = '932becea53220bb9244f779bde17b5c594ba0ab1eb4ceb925ec85ea9a446a6fc'
+    api_secret = (
+        '9a41ddf72bbab3a932a61988e588a9b83cdc2a2672c471db8f9d0c359748e9c0'
+    )
     global client, last_trade
     client = BinanceClient(api_key, api_secret, sandbox_mode=True)
 
     # Track cooldown and open positions per symbol
-    cooling_until  = {symbol: None for symbol in symbols}
-    position_open  = {symbol: False for symbol in symbols}
-    last_trade     = {}  # {'entry_price', 'side', 'quantity'}
+    cooling_until = {symbol: None for symbol in symbols}
+    position_open = {symbol: False for symbol in symbols}
+    last_trade = {}  # {'entry_price', 'side', 'quantity'}
 
     try:
         balance = await client.fetch_balance()
@@ -503,12 +502,21 @@ async def trading_loop():
                                 if info:
                                     current_price = df['close'].iloc[-1]
                                     tp, _ = calculate_tp_sl(symbol)
-                                    if ((info['side'] == 'buy' and current_price >= tp) or
-                                        (info['side'] == 'sell' and current_price <= tp)):
+                                    if (
+                                        info['side'] == 'buy'
+                                        and current_price >= tp
+                                    ) or (
+                                        info['side'] == 'sell'
+                                        and current_price <= tp
+                                    ):
                                         await set_tp(symbol)
                                         position_open[symbol] = False
-                                        cooling_until[symbol] = now + timedelta(minutes=30)
-                                        logging.info(f"{symbol} TP order placed at {tp:.2f}. Entering cooldown.")
+                                        cooling_until[symbol] = now + timedelta(
+                                            minutes=30
+                                        )
+                                        logging.info(
+                                            f"{symbol} TP order placed at {tp:.2f}. Entering cooldown."
+                                        )
                                         last_trade.pop(symbol, None)
                                 else:
                                     logging.info(f"[{symbol}@{timeframe}] 🔄 Position already open. Skipping.")

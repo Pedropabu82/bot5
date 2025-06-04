@@ -1,0 +1,5 @@
+ccxt
+pandas
+pandas_ta
+numpy
+flake8
