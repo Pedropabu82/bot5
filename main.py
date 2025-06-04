@@ -59,9 +59,13 @@ mfi_multiplier = 150
 
 # Setup logging
 datetime_fmt = '%Y-%m-%d %H:%M:%S'
-logging.basicConfig(filename='trades.log', level=logging.DEBUG,
-                    format='%(asctime)s - %(levelname)s - %(message)s', datefmt=datetime_fmt)
-print(f"Starting bot at {datetime.now().strftime(datetime_fmt)}\n")
+logging.basicConfig(
+    filename="trades.log",
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt=datetime_fmt,
+)
+logging.info("Starting bot at %s", datetime.now().strftime(datetime_fmt))
 
 # Utility: retry wrapper
 async def retry(coro, *args, retries=3, delay=2, **kwargs):
@@ -184,8 +188,12 @@ class BinanceClient:
             stop_price = round_to_tick(stop_price, market_info['tick_size'])
             quantity = round(quantity, market_info['quantity_precision'])
             opposite = 'sell' if side == 'buy' else 'buy'
-            logging.info(f"Creating STOP_MARKET @ {stop_price:.2f} for {symbol}, qty={quantity}")
-            print(f"{symbol}: Creating SL at {stop_price:.2f}")
+            logging.info(
+                "%s: Creating STOP_MARKET @ %.2f (qty=%s)",
+                symbol,
+                stop_price,
+                quantity,
+            )
             params = {
                 'stopPrice': stop_price,
                 'reduceOnly': True,
@@ -211,8 +219,12 @@ class BinanceClient:
                 if o['type'] in ['stop_market', 'take_profit_market'] and o['symbol'] == symbol.replace('/', ''):
                     await retry(self.exchange.cancel_order, o['id'], symbol)
                     logging.info(f"Cancelled existing order {o['id']} for {symbol}")
-            logging.info(f"Creating TAKE_PROFIT_MARKET @ {tp_price:.2f} for {symbol}, qty={quantity}")
-            print(f"{symbol}: Creating TP at {tp_price:.2f}")
+            logging.info(
+                "%s: Creating TAKE_PROFIT_MARKET @ %.2f (qty=%s)",
+                symbol,
+                tp_price,
+                quantity,
+            )
             params = {
                 'stopPrice': tp_price,
                 'reduceOnly': True,
@@ -336,7 +348,7 @@ async def trading_loop():
 
     try:
         balance = await client.fetch_balance()
-        print(f"✅ Conexão verificada! Saldo disponível: {balance}\n")
+        logging.info("✅ Conexão verificada! Saldo disponível: %s", balance)
 
         while True:
             now = datetime.now()
@@ -344,7 +356,11 @@ async def trading_loop():
             for symbol in symbols:
                 # Skip if cooling down
                 if cooling_until[symbol] and now < cooling_until[symbol]:
-                    print(f"{symbol}: Cooling down until {cooling_until[symbol]}. Skipping.")
+                    logging.info(
+                        "%s: Cooling down until %s. Skipping.",
+                        symbol,
+                        cooling_until[symbol],
+                    )
                     continue
 
                 # Update position status
@@ -379,7 +395,11 @@ async def trading_loop():
                     cooling_until[symbol] = now + timedelta(minutes=30)
                     position_open[symbol] = False
                     last_trade.pop(symbol, None)
-                    print(f"{symbol}: Position closed. Cooling down until {cooling_until[symbol]}.\n")
+                    logging.info(
+                        "%s: Position closed. Cooling down until %s.",
+                        symbol,
+                        cooling_until[symbol],
+                    )
                     continue
 
                 # If no open position, scan timeframes for signals
@@ -434,14 +454,7 @@ async def trading_loop():
                             sellSignal = wt_cross_down
 
                             # Debug prints
-                            print(f"[{symbol}@{timeframe}]")
-                            print(f"  Price: {df['close'].iloc[-1]}")
-                            print(f"  WT2: {df['wt2'].iloc[-1]}, WT1: {df['wt1'].iloc[-1]}"
-                                  f" (cross_up: {wt_cross_up.iloc[-1]}, cross_down: {wt_cross_down.iloc[-1]})")
-                            print(f"  Divergências - Bull: {wt_bull_div.iloc[-1]}, Bear: {wt_bear_div.iloc[-1]}")
-                            print(f"  Gold: {wt_gold.iloc[-1]}")
-                            print(f"  RSI: {df['rsi'].iloc[-1]}")
-                            print(f"  MFI: {df['mfi'].iloc[-1]}\n")
+                            logging.debug("[%s@%s] Price: %s, WT2: %s, WT1: %s (cross_up: %s, cross_down: %s), Divergências - Bull: %s, Bear: %s, Gold: %s, RSI: %s, MFI: %s", symbol, timeframe, df["close"].iloc[-1], df["wt2"].iloc[-1], df["wt1"].iloc[-1], wt_cross_up.iloc[-1], wt_cross_down.iloc[-1], wt_bull_div.iloc[-1], wt_bear_div.iloc[-1], wt_gold.iloc[-1], df["rsi"].iloc[-1], df["mfi"].iloc[-1])
 
                             pos_amt_check = await client.get_position_amt(symbol)
                             if pos_amt_check == 0:
@@ -519,7 +532,7 @@ async def trading_loop():
             await asyncio.sleep(60)
 
     except Exception as e:
-        print(f"❌ Erro na execução do bot: {e}\n{traceback.format_exc()}")
+        logging.error("❌ Erro na execução do bot: %s\n%s", e, traceback.format_exc())
     finally:
         await client.close()
 
