@@ -1,7 +1,5 @@
 import pandas as pd
 import pandas_ta as ta
-import numpy as np
-import time
 import logging
 import traceback
 from datetime import datetime, timedelta
@@ -9,7 +7,6 @@ import ccxt.async_support as ccxt
 import asyncio
 import json
 import os
-import math
 
 # Load configuration from JSON
 config_path = 'config.json'
@@ -281,7 +278,7 @@ def find_divergences(series, price, ob_level, os_level):
     )
     return bear_div, bull_div
 
-async def set_sl(symbol):
+async def set_sl(client, symbol):
     for _ in range(2):
         if not last_trade.get(symbol) or not last_trade[symbol].get('quantity'):
             logging.error(f"No trade data for {symbol} to set SL")
@@ -304,7 +301,7 @@ async def set_sl(symbol):
             logging.error(f"Failed to set SL for {symbol}: {str(e)}")
             await asyncio.sleep(2)
 
-async def set_tp(symbol):
+async def set_tp(client, symbol):
     for _ in range(2):
         if not last_trade.get(symbol) or not last_trade[symbol].get('quantity'):
             logging.error(f"No trade data for {symbol} to set TP")
@@ -336,10 +333,15 @@ def calculate_tp_sl(symbol):
     return tp, sl
 
 async def trading_loop():
-    api_key    = '932becea53220bb9244f779bde17b5c594ba0ab1eb4ceb925ec85ea9a446a6fc'
-    api_secret = '9a41ddf72bbab3a932a61988e588a9b83cdc2a2672c471db8f9d0c359748e9c0'
-    global client, last_trade
+    api_key = os.environ.get("BINANCE_API_KEY")
+    api_secret = os.environ.get("BINANCE_API_SECRET")
+    if not api_key or not api_secret:
+        logging.error(
+            "BINANCE_API_KEY and BINANCE_API_SECRET environment variables are required"
+        )
+        return
     client = BinanceClient(api_key, api_secret, sandbox_mode=True)
+    global last_trade
 
     # Track cooldown and open positions per symbol
     cooling_until  = {symbol: None for symbol in symbols}
@@ -477,8 +479,8 @@ async def trading_loop():
                                                 'quantity': quantity
                                             }
                                             position_open[symbol] = True
-                                            await set_sl(symbol)
-                                            await set_tp(symbol)
+                                            await set_sl(client, symbol)
+                                            await set_tp(client, symbol)
                                             break
                                         else:
                                             logging.error(f"Failed to confirm position for {symbol} after buy order")
@@ -499,8 +501,8 @@ async def trading_loop():
                                                 'quantity': quantity
                                             }
                                             position_open[symbol] = True
-                                            await set_sl(symbol)
-                                            await set_tp(symbol)
+                                            await set_sl(client, symbol)
+                                            await set_tp(client, symbol)
                                             break
                                         else:
                                             logging.error(f"Failed to confirm position for {symbol} after sell order")
@@ -518,7 +520,7 @@ async def trading_loop():
                                     tp, _ = calculate_tp_sl(symbol)
                                     if ((info['side'] == 'buy' and current_price >= tp) or
                                         (info['side'] == 'sell' and current_price <= tp)):
-                                        await set_tp(symbol)
+                                        await set_tp(client, symbol)
                                         position_open[symbol] = False
                                         cooling_until[symbol] = now + timedelta(minutes=30)
                                         logging.info(f"{symbol} TP order placed at {tp:.2f}. Entering cooldown.")
