@@ -1,0 +1,6 @@
+pandas
+pandas_ta
+numpy
+ccxt
+pytest
+flake8

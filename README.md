@@ -1,28 +1,30 @@
- (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
-diff --git a//dev/null b/README.md
-index 0000000000000000000000000000000000000000..66ec20c3103545d844afcbaf41971957dd1c062c 100644
---- a//dev/null
-+++ b/README.md
-@@ -0,0 +1,19 @@
-+# Bot5
-+
-+Este projeto contém um bot de trading e utilidades associadas.
-+
-+## Rodando os testes
-+
-+Para executar a suíte de testes, utilize o `pytest` a partir do diretório raiz do projeto:
-+
-+```bash
-+pytest
-+```
-+
-+Antes de executar, instale as dependências principais com:
-+
-+```bash
-+pip install numpy pandas pandas_ta pytest
-+```
-+
-+Isso garantirá que as bibliotecas necessárias estejam disponíveis para que os testes rodem corretamente.
- 
-EOF
-)
+# Bot5
+
+Bot5 is a simple trading bot that uses the Binance futures API via the
+`ccxt` library.
+
+## Setup
+
+Install the Python dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Copy `config.json` and adjust the strategy settings if necessary. The bot
+expects Binance credentials to be provided through the environment:
+
+```bash
+export BINANCE_API_KEY=your_key
+export BINANCE_API_SECRET=your_secret
+```
+
+## Running
+
+Execute the bot directly with Python:
+
+```bash
+python main.py
+```
+
+The API key and secret must be defined for the bot to connect to Binance.
